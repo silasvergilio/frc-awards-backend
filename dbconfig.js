@@ -1,6 +1,6 @@
 module.exports = {
-    HOST: "yhrz9vns005e0734.cbetxkdyhwsb.us-east-1.rds.amazonaws.com",
-    USER: "kegve9ae9xybqoid",
-    PASSWORD: "ao2n003m5o6y71um",
-    DB: "xumxzuzz25h09bga"
+    HOST: "s554ongw9quh1xjs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com",
+    USER: "vwzsk3979v3pr0jl",
+    PASSWORD: "g082dhui3yeqs69g",
+    DB: "gorzpm410gmlrp26"
   };
