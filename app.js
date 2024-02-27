@@ -32,7 +32,7 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.use(cors({
-  origin: ["https://ftcawards.vercel.app","http://localhost:8081"],
+  origin: ["https://ftcawards.vercel.app","http://localhost:8081","http://localhost:8080"],
   methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD", "DELETE"],
   credentials: true,
 }));

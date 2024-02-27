@@ -36,7 +36,7 @@ router.get("/:award", function (req, res, next) {
     myFilesData = data.Contents;
 
     var sql =
-      "SELECT * FROM Teams INNER JOIN ?? ON ??.Teams_idTime = Teams.idTime ORDER BY ??.position;";
+      "SELECT * FROM Teams INNER JOIN ?? ON ??.Teams_idTime = Teams.idTime";
     let values = [req.params.award, req.params.award, req.params.award];
     db.query(sql, values, (err, result) => {
       if (err) throw err;
@@ -59,12 +59,21 @@ router.get("/:award", function (req, res, next) {
 
 router.get("/non-nominated/teams", jsonParser, function (req, res) {
   var sql =
-    "SELECT * FROM Teams t1 WHERE NOT EXISTS(SELECT NULL FROM PensamentoCriativo t2 WHERE t2.Teams_idTime = t1.idTime )" +
-    " AND NOT EXISTS (SELECT NULL FROM Conexao t3 WHERE t3.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Inovacao t4 WHERE t4.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Design t5 WHERE t5.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Motivacao t6 WHERE t6.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Controle t7 WHERE t7.Teams_idTime = t1.idTime)";
+    "SELECT * FROM Teams t1 WHERE NOT EXISTS(SELECT NULL FROM Autonomous t2 WHERE t2.Teams_idTime = t1.idTime )" +
+    " AND NOT EXISTS (SELECT NULL FROM Creativity t3 WHERE t3.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM ExcellenceEngineering t4 WHERE t4.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM IndustrialDesign t5 WHERE t5.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM InnovationControl t6 WHERE t6.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM Quality t7 WHERE t7.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM EngineeringInspiration t8 WHERE t8.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM RookieInspiration t9 WHERE t9.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM Ras t10 WHERE t10.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM TeamSustainability t11 WHERE t11.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM Judges t12 WHERE t12.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM Gracious t13 WHERE t13.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM Imagery t14 WHERE t14.Teams_idTime = t1.idTime)" +
+    " AND NOT EXISTS (SELECT NULL FROM TeamSpirit t15 WHERE t15.Teams_idTime = t1.idTime)";
+
   //var values = [req.params.award, req.body.id];
 
   db.query(sql, function (err, result) {
@@ -74,23 +83,9 @@ router.get("/non-nominated/teams", jsonParser, function (req, res) {
   });
 });
 
-router.get("/list/inspire", jsonParser, function (req, res) {
-  var sql =
-    "SELECT * FROM Teams WHERE EXISTS(SELECT NULL FROM PensamentoCriativo WHERE PensamentoCriativo.Teams_idTime = Teams.idTime) " +
-    "AND (EXISTS (SELECT NULL FROM Inovacao WHERE Inovacao.Teams_idTime = Teams.idTime) OR EXISTS(SELECT NULL FROM Design WHERE Design.Teams_idTime = Teams.idTime) OR EXISTS(SELECT NULL FROM Controle WHERE Controle.Teams_idTime = Teams.idTime)) " +
-    "AND (EXISTS (SELECT NULL FROM Conexao WHERE Conexao.Teams_idTime = Teams.idTime) OR EXISTS(SELECT NULL FROM Motivacao WHERE Motivacao.Teams_idTime = Teams.idTime))";
-  //var values = [req.params.award, req.body.id];
-
-  db.query(sql, function (err, result) {
-    if (err) throw err;
-    console.log("Inspire Teams");
-    res.send(result);
-  });
-});
-
 router.put("/:award", jsonParser, function (req, res) {
-  var sql = "UPDATE ?? SET premiado = !premiado WHERE Teams_idTime = ? ";
-  var values = [req.params.award, req.body.id];
+  var sql = "UPDATE ?? SET nominated = ? WHERE Teams_idTime = ? ";
+  var values = [req.params.award, req.body.nominated, req.body.id];
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
@@ -112,7 +107,6 @@ router.delete("/:award", jsonParser, function (req, res) {
 
 //https://bucketeer-dd8b11fb-c2ce-40a9-84a9-db3c9d5a341c.s3.us-east-1.amazonaws.com/standard.png
 
-router.post("/upload", upload.single("file"), async (req, res) => {});
 
 router.post("/:award", upload.single("file"), async function (req, res) {
   const file = req.file;
@@ -137,19 +131,21 @@ router.post("/:award", upload.single("file"), async function (req, res) {
   }
 
   var sql =
-    "INSERT INTO ?? (motive,premiado,sala,Teams_idTime) VALUES (?,0,?,(SELECT idTime FROM Teams WHERE text = ?))";
-  var values = [req.params.award, reqData.motive, reqData.sala, reqData.text];
+    "INSERT INTO ?? (motive,nominated,judge,Teams_idTime) VALUES (?,true,?,(SELECT idTime FROM Teams WHERE value = ?))";
+  var values = [req.params.award, reqData.motive, reqData.judge, reqData.value];
 
   db.query(sql, values, function (err, result) {
     if (err) {
+      console.log(err);
       res.status(500).send({
         SqlError: err,
         errno: 1010,
         Status: 500,
       });
+    } else {
+      console.log("1 record inserted");
+      res.send("Inserted");
     }
-    console.log("1 record inserted");
-    res.send("Inserted");
   });
 });
 
