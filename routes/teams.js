@@ -15,8 +15,8 @@ const fileFilter = (req, file, cb) => {
 
 const AWS = require("aws-sdk");
 const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  accessKeyId: process.env.BUCKETEER_AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
 });
 
 const upload = multer({ storage: storage, fileFilter: fileFilter });
@@ -40,7 +40,7 @@ const instance = axios.create({
 /* GET teams listing. */
 router.get("/", function (req, res, next) {
   var paramsGetFiles = {
-    Bucket: process.env.S3_BUCKET,
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
   };
   var myFilesData = [];
   s3.listObjects(paramsGetFiles, function (err, data) {
@@ -50,8 +50,8 @@ router.get("/", function (req, res, next) {
     //console.log(req.user());
     var sql = "SELECT * FROM Teams ORDER BY Teams.value";
     db.query(sql, (err, result) => {
+      if(req.query.image == "true"){
       result.forEach((element) => {
-        console.log("check image");
         imageFile = myFilesData.filter((file) => {
           return (
             file.Key.includes(element.value) && file.Key.includes("picture")
@@ -59,9 +59,9 @@ router.get("/", function (req, res, next) {
         });
         if (imageFile.length > 0) {
           console.log("Image File", imageFile);
-          element.imageLink = `https://bucketeer-dd8b11fb-c2ce-40a9-84a9-db3c9d5a341c.s3.us-east-1.amazonaws.com/${element.value}-picture`;
+          element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-picture`;
         }
-      });
+      });}
       if (err) throw err;
       res.send(result);
     });
@@ -97,7 +97,7 @@ router.post("/picture", upload.single("file"), async function (req, res) {
 
   if (file) {
     const params = {
-      Bucket: process.env.S3_BUCKET,
+      Bucket: process.env.BUCKETEER_BUCKET_NAME,
       Key: `${reqData.value}-picture`,
       Body: file.buffer,
       ContentType: file.mimetype,
@@ -123,9 +123,9 @@ router.post("/", jsonParser, function (req, res) {
     var count = 0;
     console.log("Bulk initiating");
     instance
-      .get("2024/teams", {
+      .get("2025/teams", {
         params: {
-          eventCode: "BRBR",
+          eventCode: "BRBA",
         },
       })
       .then(function (response) {

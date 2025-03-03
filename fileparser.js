@@ -2,10 +2,10 @@ const { Upload } = require("@aws-sdk/lib-storage");
 const { S3Client } = require("@aws-sdk/client-s3");
 const Transform = require('stream').Transform;
 
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const region = process.env.S3_REGION;
-const Bucket = process.env.S3_BUCKET;
+const accessKeyId = process.env.BUCKETEER_AWS_ACCESS_KEY_ID;
+const secretAccessKey = process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY;
+const region = process.env.BUCKETEER_AWS_REGION;
+const Bucket = process.env.BUCKETEER_BUCKET_NAME;
 
 const parsefile = async (req) => {
     return new Promise((resolve, reject) => {

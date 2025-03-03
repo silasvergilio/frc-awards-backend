@@ -16,8 +16,8 @@ const fileFilter = (req, file, cb) => {
 
 const AWS = require("aws-sdk");
 const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  accessKeyId: process.env.BUCKETEER_AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
 });
 
 const upload = multer({ storage: storage, fileFilter: fileFilter });
@@ -28,7 +28,7 @@ var jsonParser = bodyParser.json();
 /* GET teams listing. */
 router.get("/:award", function (req, res, next) {
   var paramsGetFiles = {
-    Bucket: process.env.S3_BUCKET,
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
   };
   var myFilesData = [];
   s3.listObjects(paramsGetFiles, function (err, data) {
@@ -49,7 +49,7 @@ router.get("/:award", function (req, res, next) {
         });
         if (imageFile.length > 0) {
           console.log("Image File", imageFile);
-          element.imageLink = `https://bucketeer-dd8b11fb-c2ce-40a9-84a9-db3c9d5a341c.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
+          element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
         }
       });
       res.send(result);
@@ -116,7 +116,7 @@ router.post("/:award", upload.single("file"), async function (req, res) {
 
   if (file) {
     const params = {
-      Bucket: process.env.S3_BUCKET,
+      Bucket: process.env.BUCKETEER_BUCKET_NAME,
       Key: `${reqData.value}-${req.params.award}`,
       Body: file.buffer,
       ContentType: file.mimetype,
