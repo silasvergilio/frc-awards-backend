@@ -125,7 +125,7 @@ router.post("/", jsonParser, function (req, res) {
     instance
       .get("2025/teams", {
         params: {
-          eventCode: "BRBA",
+          eventCode: "BRSP",
         },
       })
       .then(function (response) {
