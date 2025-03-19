@@ -48,7 +48,7 @@ router.get("/", function (req, res, next) {
     myFilesData = data.Contents;
 
     //console.log(req.user());
-    var sql = "SELECT * FROM Teams ORDER BY Teams.value";
+    var sql = "SELECT * FROM Teams ORDER BY Teams.value ASC";
     db.query(sql, (err, result) => {
       if(req.query.image == "true"){
       result.forEach((element) => {
