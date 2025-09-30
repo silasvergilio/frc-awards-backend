@@ -59,7 +59,7 @@ router.post("/", jsonParser, function (req, res, next) {
         req.body.permission,
         req.body.name,
       ];
-
+      
       db.query(sql, values, function (err, result) {
         if (err) {
           res.status(400).send({

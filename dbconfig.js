@@ -1,7 +1,7 @@
 module.exports = {
-    HOST: "mysql-production-fe57.up.railway.app",
+    HOST: "mysql.railway.internal",
     USER: "root",
     PASSWORD: "sOYmoOOaoqMNSfkRrDjKoRaCaMfbBYmI",
     DB: "railway",
-    PORT: "10265"
+    PORT: "3306"
   };

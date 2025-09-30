@@ -12,6 +12,13 @@ var connection = mysql.createPool({
   database: dbConfig.DB,
 });
 
-
+connection.on('error', function(err) {
+  console.error('DB error:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+      handleDisconnect(); // Reconnect
+  } else {
+      throw err;
+  }
+});
 
 module.exports = connection;
