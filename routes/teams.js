@@ -66,7 +66,6 @@ router.get("/", function (req, res, next) {
       res.send(result);
     });
   });
-});
 
 /* GET teams listing by teamNumber. */
 router.get("/:value", function (req, res, next) {
