@@ -1,6 +1,6 @@
 module.exports = {
-    HOST: "fnx6frzmhxw45qcb.cbetxkdyhwsb.us-east-1.rds.amazonaws.com",
-    USER: "vp85kw375vrhrjj0",
-    PASSWORD: "fea6lyhewo3xvtgl",
-    DB: "so7my9pjg7bxmyrc"
+    HOST: "switchyard.proxy.rlwy.net:10265",
+    USER: "root",
+    PASSWORD: "sOYmoOOaoqMNSfkRrDjKoRaCaMfbBYmI",
+    DB: "railway"
   };
