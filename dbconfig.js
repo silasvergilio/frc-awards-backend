@@ -1,5 +1,5 @@
 module.exports = {
-    HOST: "switchyard.proxy.rlwy.net:10265",
+    HOST: "mysql-production-fe57.up.railway.app",
     USER: "root",
     PASSWORD: "sOYmoOOaoqMNSfkRrDjKoRaCaMfbBYmI",
     DB: "railway"
