@@ -39,18 +39,18 @@ const instance = axios.create({
 
 /* GET teams listing. */
 router.get("/", function (req, res, next) {
-  var paramsGetFiles = {
-    Bucket: process.env.BUCKETEER_BUCKET_NAME,
-  };
+  // var paramsGetFiles = {
+  //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
+  // };
   var myFilesData = [];
-  s3.listObjects(paramsGetFiles, function (err, data) {
-    if (err) throw err;
-    myFilesData = data.Contents;
+  // s3.listObjects(paramsGetFiles, function (err, data) {
+  //   if (err) throw err;
+  //   myFilesData = data.Contents;
 
     //console.log(req.user());
     var sql = "SELECT * FROM Teams ORDER BY Teams.value ASC";
     db.query(sql, (err, result) => {
-      if(req.query.image == "true"){
+      if(req.query.image != "true"){ //TODO CORRECT LOGIC
       result.forEach((element) => {
         imageFile = myFilesData.filter((file) => {
           return (
