@@ -27,35 +27,35 @@ var jsonParser = bodyParser.json();
 
 /* GET teams listing. */
 router.get("/:award", function (req, res, next) {
-  var paramsGetFiles = {
-    Bucket: process.env.BUCKETEER_BUCKET_NAME,
-  };
-  var myFilesData = [];
-  s3.listObjects(paramsGetFiles, function (err, data) {
-    if (err) throw err;
-    myFilesData = data.Contents;
+  // var paramsGetFiles = {
+  //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
+  // };
+  // var myFilesData = [];
+  // s3.listObjects(paramsGetFiles, function (err, data) {
+  //   if (err) throw err;
+  //   myFilesData = data.Contents;
 
     var sql =
       "SELECT * FROM Teams INNER JOIN ?? ON ??.Teams_idTime = Teams.idTime";
     let values = [req.params.award, req.params.award, req.params.award];
     db.query(sql, values, (err, result) => {
       if (err) throw err;
-      result.forEach((element) => {
-        imageFile = myFilesData.filter((file) => {
-          return (
-            file.Key.includes(element.value) &&
-            file.Key.includes(req.params.award)
-          );
-        });
-        if (imageFile.length > 0) {
-          console.log("Image File", imageFile);
-          element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
-        }
-      });
+      // result.forEach((element) => {
+      //   imageFile = myFilesData.filter((file) => {
+      //     return (
+      //       file.Key.includes(element.value) &&
+      //       file.Key.includes(req.params.award)
+      //     );
+      //   });
+      //   if (imageFile.length > 0) {
+      //     console.log("Image File", imageFile);
+      //     element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
+      //   }
+      // });
       res.send(result);
     });
   });
-});
+//});
 
 router.get("/non-nominated/teams", jsonParser, function (req, res) {
   var sql =
