@@ -37,35 +37,72 @@ const instance = axios.create({
   },
 });
 
-/* GET teams listing. */
-router.get("/", function (req, res, next) {
-  // var paramsGetFiles = {
-  //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
-  // };
-  var myFilesData = [];
-  // s3.listObjects(paramsGetFiles, function (err, data) {
-  //   if (err) throw err;
-  //   myFilesData = data.Contents;
+// /* GET teams listing. */
+// router.get("/", function (req, res, next) {
+//   // var paramsGetFiles = {
+//   //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
+//   // };
+//   var myFilesData = [];
+//   // s3.listObjects(paramsGetFiles, function (err, data) {
+//   //   if (err) throw err;
+//   //   myFilesData = data.Contents;
 
-    //console.log(req.user());
-    var sql = "SELECT * FROM Teams ORDER BY Teams.value ASC";
-    db.query(sql, (err, result) => {
-      if(req.query.image != "true"){ //TODO CORRECT LOGIC
-      result.forEach((element) => {
-        imageFile = myFilesData.filter((file) => {
-          return (
-            file.Key.includes(element.value) && file.Key.includes("picture")
-          );
-        });
-        if (imageFile.length > 0) {
-          console.log("Image File", imageFile);
-          element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-picture`;
-        }
-      });}
-      if (err) throw err;
-      res.send(result);
+//     //console.log(req.user());
+//     var sql = "SELECT * FROM Teams ORDER BY Teams.value ASC";
+//     db.query(sql, (err, result) => {
+//       if(req.query.image != "true"){ //TODO CORRECT LOGIC
+//       result.forEach((element) => {
+//         imageFile = myFilesData.filter((file) => {
+//           return (
+//             file.Key.includes(element.value) && file.Key.includes("picture")
+//           );
+//         });
+//         if (imageFile.length > 0) {
+//           console.log("Image File", imageFile);
+//           element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-picture`;
+//         }
+//       });}
+//       if (err) throw err;
+//       res.send(result);
+//     });
+//   });
+
+/* GET teams listing by eventCode (from header) */
+router.get("/", function (req, res, next) {
+  const eventCode = req.headers["eventcode"]; // header precisa ser "eventCode"
+
+  if (!eventCode) {
+    console.log("NO event code")
+    return res.status(400).json({ message: "Header 'eventCode' é obrigatório" });
+  }
+
+  // 🔹 1. Buscar o id do evento pelo eventCode
+  const sqlEvent = "SELECT idEvent FROM Events WHERE eventCode = ?";
+  db.query(sqlEvent, [eventCode], (err, eventResult) => {
+    if (err) {
+      console.error("Erro ao buscar evento:", err);
+      return res.status(500).json({ message: "Erro ao buscar evento" });
+    }
+
+    if (eventResult.length === 0) {
+      return res.status(404).json({ message: "Evento não encontrado" });
+    }
+
+    console.log(eventResult[0].idEvent);
+    const eventId = eventResult[0].idEvent;
+
+    // 🔹 2. Buscar todos os times relacionados a esse evento
+    const sqlTeams = "SELECT * FROM Teams WHERE Events_idEvent = ?";
+    db.query(sqlTeams, [eventId], (err, teamsResult) => {
+      if (err) {
+        console.error("Erro ao buscar times:", err);
+        return res.status(500).json({ message: "Erro ao buscar times" });
+      }
+
+      res.json(teamsResult);
     });
   });
+});
 
 /* GET teams listing by teamNumber. */
 router.get("/:value", function (req, res, next) {
@@ -79,7 +116,6 @@ router.get("/:value", function (req, res, next) {
 
 /* GET teams listing by teamNumber. */
 router.put("/:value", jsonParser, function (req, res, next) {
-  console.log(req.body);
   var sql = "UPDATE Teams SET ?? = ? WHERE value = ?";
   var values = [req.body.visit, req.body.newValue, req.params.value];
   db.query(sql, values, (err, result) => {

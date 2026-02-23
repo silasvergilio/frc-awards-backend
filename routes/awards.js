@@ -5,6 +5,9 @@ var db = require("../connection");
 const fileparser = require("../fileparser");
 const multer = require("multer");
 
+const { v4: uuidv4 } = require("uuid");
+
+
 const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
@@ -25,37 +28,73 @@ const upload = multer({ storage: storage, fileFilter: fileFilter });
 // create application/json parser
 var jsonParser = bodyParser.json();
 
-/* GET teams listing. */
-router.get("/:award", function (req, res, next) {
-  // var paramsGetFiles = {
-  //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
-  // };
-  // var myFilesData = [];
-  // s3.listObjects(paramsGetFiles, function (err, data) {
-  //   if (err) throw err;
-  //   myFilesData = data.Contents;
+// /* GET teams listing. */
+// router.get("/", function (req, res, next) {
+//   // var paramsGetFiles = {
+//   //   Bucket: process.env.BUCKETEER_BUCKET_NAME,
+//   // };
+//   // var myFilesData = [];
+//   // s3.listObjects(paramsGetFiles, function (err, data) {
+//   //   if (err) throw err;
+//   //   myFilesData = data.Contents;
 
-    var sql =
-      "SELECT * FROM Teams INNER JOIN ?? ON ??.Teams_idTime = Teams.idTime";
-    let values = [req.params.award, req.params.award, req.params.award];
-    db.query(sql, values, (err, result) => {
-      if (err) throw err;
-      // result.forEach((element) => {
-      //   imageFile = myFilesData.filter((file) => {
-      //     return (
-      //       file.Key.includes(element.value) &&
-      //       file.Key.includes(req.params.award)
-      //     );
-      //   });
-      //   if (imageFile.length > 0) {
-      //     console.log("Image File", imageFile);
-      //     element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
-      //   }
-      // });
-      res.send(result);
-    });
+//     var sql =
+//       "SELECT * FROM Awards WHERE ";
+//     let values = [req.params.award, req.params.award, req.params.award];
+//     db.query(sql, values, (err, result) => {
+//       if (err) throw err;
+//       // result.forEach((element) => {
+//       //   imageFile = myFilesData.filter((file) => {
+//       //     return (
+//       //       file.Key.includes(element.value) &&
+//       //       file.Key.includes(req.params.award)
+//       //     );
+//       //   });
+//       //   if (imageFile.length > 0) {
+//       //     console.log("Image File", imageFile);
+//       //     element.imageLink = `https://bucketeer-bb581943-573c-48b1-8ec2-b31b1cc21958.s3.us-east-1.amazonaws.com/${element.value}-${req.params.award}`;
+//       //   }
+//       // });
+//       res.send(result);
+//     });
+//   });
+// //});
+
+/* GET awards listing filtered by eventCode (from header) */
+router.get("/", function (req, res, next) {
+  const eventCode = req.headers.eventcode;
+
+  if (!eventCode) {
+    return res.status(400).json({ error: "Header 'eventCode' é obrigatório." });
+  }
+
+  // A query faz JOIN com Events para filtrar pelo código do evento
+  const sql = `
+    SELECT 
+      a.*,
+      t.value AS teamNumber,
+      t.text AS teamName,
+      t.school,
+      t.state
+    FROM Awards a
+    JOIN Events e ON a.Events_idEvent = e.idEvent
+    JOIN Teams t ON a.Teams_idTeams = t.idTeams
+    WHERE e.eventCode = ?
+    ORDER BY sort_order;
+  `;
+
+  const values = [eventCode];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Erro ao buscar prêmios:", err);
+      return res.status(500).json({ error: "Erro interno ao buscar prêmios." });
+    }
+
+    res.json(result);
   });
-//});
+});
+
 
 router.get("/non-nominated/teams", jsonParser, function (req, res) {
   var sql =
@@ -83,9 +122,10 @@ router.get("/non-nominated/teams", jsonParser, function (req, res) {
   });
 });
 
-router.put("/:award", jsonParser, function (req, res) {
-  var sql = "UPDATE ?? SET nominated = ? WHERE Teams_idTime = ? ";
-  var values = [req.params.award, req.body.nominated, req.body.id];
+router.put("/", jsonParser, function (req, res) {
+  console.log("PUT")
+  var sql = "UPDATE awards SET nominated = ? WHERE Teams_idTeams = ? AND awardName = ? ";
+  var values = [req.body.nominated, req.body.id,req.body.award];
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
@@ -108,11 +148,11 @@ router.delete("/:award", jsonParser, function (req, res) {
 //https://bucketeer-dd8b11fb-c2ce-40a9-84a9-db3c9d5a341c.s3.us-east-1.amazonaws.com/standard.png
 
 
-router.post("/:award", upload.single("file"), async function (req, res) {
+router.post("/", upload.single("file"), async function (req, res) {
   const file = req.file;
-  console.log(req.body.bodyReq);
-  const reqData = JSON.parse(req.body.bodyReq);
-  console.log(reqData);
+  console.log(req.body);
+  const reqData = (req.body);
+  console.log("Body", reqData);
 
   if (file) {
     const params = {
@@ -131,9 +171,9 @@ router.post("/:award", upload.single("file"), async function (req, res) {
   }
 
   var sql =
-    "INSERT INTO ?? (motive,nominated,judge,Teams_idTime) VALUES (?,true,?,(SELECT idTime FROM Teams WHERE value = ?))";
-  var values = [req.params.award, reqData.motive, reqData.judge, reqData.value];
-
+    "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?))";
+  var values = [uuidv4(), reqData.awardName, reqData.motive, reqData.judge, reqData.category, reqData.value, req.headers["eventcode"]];
+console.log(values)
   db.query(sql, values, function (err, result) {
     if (err) {
       console.log(err);

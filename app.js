@@ -9,6 +9,13 @@ var db = require('./connection');
 var session = require('express-session');
 const MemoryStore = require('memorystore')(session)
 //var MySQLStore = require('express-mysql-session')(session);
+const { auth } = require('express-oauth2-jwt-bearer');
+const jwtCheck = auth({
+  audience: 'https://frc-awards.api',
+  issuerBaseURL: 'https://dev-ul3tax4j6cs1npiy.us.auth0.com',
+  tokenSigningAlg: 'RS256'
+});
+
 
 
 var indexRouter = require('./routes/index');
@@ -16,6 +23,8 @@ var usersRouter = require('./routes/users');
 var teamsRouter = require('./routes/teams');
 var awardsRouter = require('./routes/awards');
 var orderRouter = require('./routes/order');
+var eventsRouter = require('./routes/events')
+var judgesRouter = require('./routes/judges')
 
 
 //require('dotenv').config()
@@ -32,7 +41,7 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.use(cors({
-  origin: ["https://frc-awards-front.vercel.app","http://localhost:8081","http://localhost:8080"],
+  origin: ["https://frc-awards-front.vercel.app", "http://localhost:8081", "http://localhost:8080"],
   methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD", "DELETE"],
   credentials: true,
 }));
@@ -45,8 +54,8 @@ app.use(session({
   resave: true,
   saveUninitialized: false,
   cookie: {
-    sameSite: 'none', // must be 'none' to enable cross-site delivery
-    secure: 'true',
+    sameSite: 'lax', // must be 'none' to enable cross-site delivery
+    secure: false,
   } // must be true if sameSite='none'
 }));
 app.use(passport.initialize());
@@ -59,12 +68,22 @@ app.use(express.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(jwtCheck);
+app.use((req, res, next) => {
+  if (req.auth) {
+    req.user = req.auth.payload || req.auth; // depende da versão
+  }
+  next();
+});
+
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/teams', teamsRouter);
 app.use('/awards', awardsRouter);
 app.use('/order', orderRouter);
+app.use('/events', eventsRouter);
+app.use('/judges', judgesRouter);
 
 
 // catch 404 and forward to error handler
