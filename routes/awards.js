@@ -134,9 +134,21 @@ router.put("/", jsonParser, function (req, res) {
   });
 });
 
-router.delete("/:award", jsonParser, function (req, res) {
-  var sql = "DELETE FROM ?? WHERE Teams_idTime = ?";
-  var values = [req.params.award, req.body.id];
+router.put("/order", jsonParser, function (req, res) {
+
+  var sql = "UPDATE awards SET order = ? WHERE Teams_idTeams = ? AND awardName = ? ";
+  var values = [req.body.order, req.body.id,req.body.award];
+
+  db.query(sql, values, function (err, result) {
+    if (err) throw err;
+    console.log("1 record updated");
+    res.send("Inserted");
+  });
+});
+
+router.delete("/", jsonParser, function (req, res) {
+  var sql = "DELETE FROM Awards WHERE Teams_idTeams = ? AND awardName = ? ";
+  var values = [req.body.id, req.body.award];
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
