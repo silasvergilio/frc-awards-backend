@@ -84,7 +84,7 @@ router.post("/", jsonParser, async function (req, res) {
             return res.status(403).json({ message: "Acesso negado" });
         }
 
-        const program = req.body.program;
+        const program = req.body.program.value;
         console.log("program", program)
         const instance = program == 'frc' ? instanceFrc : instanceFtc;
 
