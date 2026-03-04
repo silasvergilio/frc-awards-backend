@@ -136,8 +136,8 @@ router.put("/", jsonParser, function (req, res) {
 
 router.put("/order", jsonParser, function (req, res) {
 
-  var sql = "UPDATE awards SET order = ? WHERE Teams_idTeams = ? AND awardName = ? ";
-  var values = [req.body.order, req.body.id,req.body.award];
+  var sql = "UPDATE Awards SET sort_order = ? WHERE Teams_idTeams = ? AND awardName = ? ";
+  var values = [req.body.newOrder, req.body.teamId,req.body.awardName];
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
