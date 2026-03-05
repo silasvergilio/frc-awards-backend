@@ -97,35 +97,34 @@ router.get("/", function (req, res, next) {
 
 
 router.get("/non-nominated/teams", jsonParser, function (req, res) {
-  var sql =
-    "SELECT * FROM Teams t1 WHERE NOT EXISTS(SELECT NULL FROM Autonomous t2 WHERE t2.Teams_idTime = t1.idTime )" +
-    " AND NOT EXISTS (SELECT NULL FROM Creativity t3 WHERE t3.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM ExcellenceEngineering t4 WHERE t4.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM IndustrialDesign t5 WHERE t5.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM InnovationControl t6 WHERE t6.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Quality t7 WHERE t7.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM EngineeringInspiration t8 WHERE t8.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM RookieInspiration t9 WHERE t9.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Ras t10 WHERE t10.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM TeamSustainability t11 WHERE t11.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Judges t12 WHERE t12.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Gracious t13 WHERE t13.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM Imagery t14 WHERE t14.Teams_idTime = t1.idTime)" +
-    " AND NOT EXISTS (SELECT NULL FROM TeamSpirit t15 WHERE t15.Teams_idTime = t1.idTime)";
+  const eventCode = req.headers.eventcode;
 
-  //var values = [req.params.award, req.body.id];
+  const sql = `
+    SELECT t.*
+    FROM Teams t
+    JOIN Events e ON e.idEvent = t.Events_idEvent
+    LEFT JOIN Awards a
+      ON a.Teams_idTeams = t.idTeams
+      AND a.Events_idEvent = e.idEvent
+    WHERE e.eventCode = ?
+    AND a.idAwards IS NULL 
+    ORDER BY CAST(value AS UNSIGNED)
+  `;
 
-  db.query(sql, function (err, result) {
-    if (err) throw err;
-    console.log("RemainingTeams");
-    res.send(result);
+  db.query(sql, [eventCode], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: err });
+    }
+
+    res.json(result);
   });
 });
 
 router.put("/", jsonParser, function (req, res) {
   console.log("PUT")
   var sql = "UPDATE awards SET nominated = ? WHERE Teams_idTeams = ? AND awardName = ? ";
-  var values = [req.body.nominated, req.body.id,req.body.award];
+  var values = [req.body.nominated, req.body.id, req.body.award];
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
@@ -134,16 +133,32 @@ router.put("/", jsonParser, function (req, res) {
   });
 });
 
-router.put("/order", jsonParser, function (req, res) {
+router.put("/order", jsonParser, async function (req, res) {
+  const updates = req.body.awards;
+  console.log("updates", updates)
 
-  var sql = "UPDATE Awards SET sort_order = ? WHERE Teams_idTeams = ? AND awardName = ? ";
-  var values = [req.body.newOrder, req.body.teamId,req.body.awardName];
+  try {
+    const promises = updates.map(item => {
+      return new Promise((resolve, reject) => {
+        db.query(
+          "UPDATE Awards SET `sort_order` = ? WHERE idAwards = ?",
+          [item.order, item.id],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+    });
 
-  db.query(sql, values, function (err, result) {
-    if (err) throw err;
-    console.log("1 record updated");
-    res.send("Inserted");
-  });
+    await Promise.all(promises);
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error });
+  }
 });
 
 router.delete("/", jsonParser, function (req, res) {
@@ -185,7 +200,7 @@ router.post("/", upload.single("file"), async function (req, res) {
   var sql =
     "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?))";
   var values = [uuidv4(), reqData.awardName, reqData.motive, reqData.judge, reqData.category, reqData.value, req.headers["eventcode"]];
-console.log(values)
+  console.log(values)
   db.query(sql, values, function (err, result) {
     if (err) {
       console.log(err);

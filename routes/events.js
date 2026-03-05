@@ -87,10 +87,11 @@ router.post("/", jsonParser, async function (req, res) {
         const program = req.body.program.value;
         console.log("program", program)
         const instance = program == 'frc' ? instanceFrc : instanceFtc;
+        const year = program == 'frc' ? '2026' : '2025';
 
 
         // 🔹 1. Buscar o evento na API da FIRST
-        const eventsResponse = await instance.get("2026/events", {
+        const eventsResponse = await instance.get(`${year}/events`, {
             params: { eventCode: req.body.eventCode },
         });
         // Seleciona a propriedade de acordo com o programa
@@ -153,7 +154,7 @@ router.post("/", jsonParser, async function (req, res) {
         });
 
         // 🔹 3. Buscar times do evento
-        const teamsResponse = await instance.get("2026/teams", {
+        const teamsResponse = await instance.get(`${year}/teams`, {
             params: { eventCode: req.body.eventCode },
         });
 

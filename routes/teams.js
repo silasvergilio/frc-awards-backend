@@ -92,7 +92,7 @@ router.get("/", function (req, res, next) {
     const eventId = eventResult[0].idEvent;
 
     // 🔹 2. Buscar todos os times relacionados a esse evento
-    const sqlTeams = "SELECT * FROM Teams WHERE Events_idEvent = ?";
+    const sqlTeams = "SELECT * FROM Teams WHERE Events_idEvent = ? ORDER BY CAST(value AS UNSIGNED)";
     db.query(sqlTeams, [eventId], (err, teamsResult) => {
       if (err) {
         console.error("Erro ao buscar times:", err);
