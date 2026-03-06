@@ -4,6 +4,7 @@ var router = express.Router();
 var db = require("../connection");
 const fileparser = require("../fileparser");
 const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
 
 const { v4: uuidv4 } = require("uuid");
 
@@ -23,7 +24,7 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
 });
 
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+//const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 // create application/json parser
 var jsonParser = bodyParser.json();
@@ -133,6 +134,28 @@ router.put("/", jsonParser, function (req, res) {
   });
 });
 
+router.put("/awarded", jsonParser, function (req, res) {
+  var sql = "UPDATE awards SET awarded = ? WHERE Teams_idTeams = ? AND awardName = ? ";
+  var sql2 = `UPDATE Awards SET nominated = ? WHERE Teams_idTeams = ? AND awardName <> ?`;
+  var values = [req.body.awarded, req.body.id, req.body.award];
+  var values2 = [!req.body.awarded, req.body.id, req.body.award];
+
+
+  db.query(sql, values, function (err, result) {
+    if (err) throw err;
+    console.log("1 record updated");
+    // res.send("Inserted");
+  });
+
+  db.query(sql2, values2, function (err, result) {
+    if (err) throw err;
+    console.log("1 record updated 2");
+     res.send("Inserted");
+  });
+
+
+});
+
 router.put("/order", jsonParser, async function (req, res) {
   const updates = req.body.awards;
   console.log("updates", updates)
@@ -176,26 +199,26 @@ router.delete("/", jsonParser, function (req, res) {
 
 
 router.post("/", upload.single("file"), async function (req, res) {
-  const file = req.file;
+  const image = req.file;
   console.log(req.body);
   const reqData = (req.body);
   console.log("Body", reqData);
 
-  if (file) {
-    const params = {
-      Bucket: process.env.BUCKETEER_BUCKET_NAME,
-      Key: `${reqData.value}-${req.params.award}`,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    };
+  // if (file) {
+  //   const params = {
+  //     Bucket: process.env.BUCKETEER_BUCKET_NAME,
+  //     Key: `${reqData.value}-${req.params.award}`,
+  //     Body: file.buffer,
+  //     ContentType: file.mimetype,
+  //   };
 
-    try {
-      await s3.upload(params).promise();
-      console.log("File uploaded to S3 successfully!");
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  //   try {
+  //     await s3.upload(params).promise();
+  //     console.log("File uploaded to S3 successfully!");
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // }
 
   var sql =
     "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?))";
