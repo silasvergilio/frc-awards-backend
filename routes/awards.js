@@ -4,19 +4,36 @@ var router = express.Router();
 var db = require("../connection");
 const fileparser = require("../fileparser");
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
 
 const { v4: uuidv4 } = require("uuid");
 
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/awards/");
+  },
+  filename: function (req, file, cb) {
+    const ext = file.originalname.split(".").pop();
+    const filename = `${uuidv4()}.${ext}`;
+    cb(null, filename);
+  }
+});
+
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+  if (
+    file.mimetype === "image/jpeg" ||
+    file.mimetype === "image/png"
+  ) {
     cb(null, true);
   } else {
-    cb(null, false);
+    cb(new Error("Formato de imagem inválido"), false);
   }
 };
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter
+});
 
 const AWS = require("aws-sdk");
 const s3 = new AWS.S3({
@@ -198,11 +215,11 @@ router.delete("/", jsonParser, function (req, res) {
 //https://bucketeer-dd8b11fb-c2ce-40a9-84a9-db3c9d5a341c.s3.us-east-1.amazonaws.com/standard.png
 
 
-router.post("/", upload.single("file"), async function (req, res) {
+router.post("/", upload.single("image"), async function (req, res) {
   const image = req.file;
-  console.log(req.body);
   const reqData = (req.body);
   console.log("Body", reqData);
+  console.log("image", image)
 
   // if (file) {
   //   const params = {
@@ -220,9 +237,16 @@ router.post("/", upload.single("file"), async function (req, res) {
   //   }
   // }
 
+  let imagePath = null;
+
+  if (image) {
+    imagePath = `/uploads/awards/${image.filename}`;
+  }
+
+
   var sql =
-    "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?))";
-  var values = [uuidv4(), reqData.awardName, reqData.motive, reqData.judge, reqData.category, reqData.value, req.headers["eventcode"]];
+    "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent, imagePath) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?),?)";
+  var values = [uuidv4(), reqData.awardName, reqData.motive, reqData.judge, reqData.category, reqData.value, req.headers["eventcode"],imagePath];
   console.log(values)
   db.query(sql, values, function (err, result) {
     if (err) {
@@ -234,8 +258,11 @@ router.post("/", upload.single("file"), async function (req, res) {
       });
     } else {
       console.log("1 record inserted");
-      res.send("Inserted");
-    }
+      res.json({
+        success: true,
+        imagePath
+      });
+      }
   });
 });
 

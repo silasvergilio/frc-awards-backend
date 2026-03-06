@@ -10,6 +10,10 @@ var session = require('express-session');
 const MemoryStore = require('memorystore')(session)
 //var MySQLStore = require('express-mysql-session')(session);
 const { auth } = require('express-oauth2-jwt-bearer');
+
+
+
+
 const jwtCheck = auth({
   audience: 'https://frc-awards.api',
   issuerBaseURL: 'https://dev-ul3tax4j6cs1npiy.us.auth0.com',
@@ -35,6 +39,7 @@ initializePassport(passport);
 
 
 var app = express();
+app.use("/uploads", express.static("uploads"));
 
 
 // view engine setup
