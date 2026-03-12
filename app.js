@@ -75,7 +75,6 @@ app.use(express.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(jwtCheck);
 app.use((req, res, next) => {
   if (req.auth) {
     req.user = req.auth.payload || req.auth; // depende da versão
@@ -83,14 +82,16 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api',jwtCheck);
+
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/teams', teamsRouter);
-app.use('/awards', awardsRouter);
-app.use('/order', orderRouter);
-app.use('/events', eventsRouter);
-app.use('/judges', judgesRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/teams', teamsRouter);
+app.use('/api/awards', awardsRouter);
+app.use('/api/order', orderRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/judges', judgesRouter);
 
 
 // catch 404 and forward to error handler
