@@ -14,11 +14,7 @@ const { auth } = require('express-oauth2-jwt-bearer');
 
 
 var app = express();
-app.use("/uploads", express.static("uploads", {
-  setHeaders: (res) => {
-    res.set("Access-Control-Allow-Origin", "*");
-  }
-}));
+app.use("/uploads", express.static("uploads"));
 const jwtCheck = auth({
   audience: 'https://frc-awards.api',
   issuerBaseURL: 'https://dev-ul3tax4j6cs1npiy.us.auth0.com',
