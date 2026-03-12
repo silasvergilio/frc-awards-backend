@@ -13,13 +13,14 @@ const { auth } = require('express-oauth2-jwt-bearer');
 
 
 
+var app = express();
+app.use("/uploads", express.static("uploads"));
 
 const jwtCheck = auth({
   audience: 'https://frc-awards.api',
   issuerBaseURL: 'https://dev-ul3tax4j6cs1npiy.us.auth0.com',
   tokenSigningAlg: 'RS256'
 });
-
 
 
 var indexRouter = require('./routes/index');
@@ -38,8 +39,6 @@ const initializePassport = require('./passport-config');
 initializePassport(passport);
 
 
-var app = express();
-app.use("/uploads", express.static("uploads"));
 
 
 // view engine setup
