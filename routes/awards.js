@@ -7,41 +7,47 @@ const multer = require("multer");
 
 const { v4: uuidv4 } = require("uuid");
 
+const { upload: s3Upload, signedUrl } = require("../lib/s3");
+const socketManager = require("../lib/socket");
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/awards/");
-  },
-  filename: function (req, file, cb) {
-    const ext = file.originalname.split(".").pop();
-    const filename = `${uuidv4()}.${ext}`;
-    cb(null, filename);
-  }
-});
+// Look up eventCode by Teams_idTeams (fire-and-forget socket helper)
+function emitByTeam(teamId) {
+  db.query(
+    `SELECT e.eventCode FROM Teams t
+     JOIN Events e ON e.idEvent = t.Events_idEvent
+     WHERE t.idTeams = ? LIMIT 1`,
+    [teamId],
+    (err, rows) => {
+      if (!err && rows?.[0]?.eventCode) {
+        socketManager.emit(rows[0].eventCode, "awards:changed");
+      }
+    }
+  );
+}
+
+function emitByAward(awardId) {
+  db.query(
+    `SELECT e.eventCode FROM Awards a
+     JOIN Events e ON e.idEvent = a.Events_idEvent
+     WHERE a.idAwards = ? LIMIT 1`,
+    [awardId],
+    (err, rows) => {
+      if (!err && rows?.[0]?.eventCode) {
+        socketManager.emit(rows[0].eventCode, "awards:changed");
+      }
+    }
+  );
+}
 
 const fileFilter = (req, file, cb) => {
-  if (
-    file.mimetype === "image/jpeg" ||
-    file.mimetype === "image/png"
-  ) {
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
     cb(null, true);
   } else {
     cb(new Error("Formato de imagem inválido"), false);
   }
 };
 
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter
-});
-
-const AWS = require("aws-sdk");
-const s3 = new AWS.S3({
-  accessKeyId: process.env.BUCKETEER_AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
-});
-
-//const upload = multer({ storage: storage, fileFilter: fileFilter });
+const upload = multer({ storage: multer.memoryStorage(), fileFilter });
 
 // create application/json parser
 var jsonParser = bodyParser.json();
@@ -109,7 +115,13 @@ router.get("/", function (req, res, next) {
       return res.status(500).json({ error: "Erro interno ao buscar prêmios." });
     }
 
-    res.json(result);
+    // Replace stored S3 keys with presigned URLs so the frontend can display them
+    const signed = result.map((row) => ({
+      ...row,
+      imagePath: row.imagePath ? signedUrl(row.imagePath) : null,
+    }));
+
+    res.json(signed);
   });
 });
 
@@ -147,6 +159,7 @@ router.put("/", jsonParser, function (req, res) {
   db.query(sql, values, function (err, result) {
     if (err) throw err;
     console.log("1 record updated");
+    emitByTeam(req.body.id);
     res.send("Inserted");
   });
 });
@@ -161,13 +174,13 @@ router.put("/awarded", jsonParser, function (req, res) {
   db.query(sql, values, function (err, result) {
     if (err) throw err;
     console.log("1 record updated");
-    // res.send("Inserted");
   });
 
   db.query(sql2, values2, function (err, result) {
     if (err) throw err;
     console.log("1 record updated 2");
-     res.send("Inserted");
+    emitByTeam(req.body.id);
+    res.send("Inserted");
   });
 
 
@@ -193,6 +206,9 @@ router.put("/order", jsonParser, async function (req, res) {
 
     await Promise.all(promises);
 
+    // Emit after all orders updated — look up eventCode from first award
+    if (updates.length > 0) emitByAward(updates[0].id);
+
     res.json({ success: true });
 
   } catch (error) {
@@ -201,9 +217,42 @@ router.put("/order", jsonParser, async function (req, res) {
   }
 });
 
+router.patch("/:idAwards", jsonParser, function (req, res) {
+  const { motive, awardName, judge, category } = req.body;
+  const fields = [];
+  const values = [];
+
+  if (motive    !== undefined) { fields.push("motive = ?");    values.push(motive); }
+  if (awardName !== undefined) { fields.push("awardName = ?"); values.push(awardName); }
+  if (judge     !== undefined) { fields.push("judge = ?");     values.push(judge); }
+  if (category  !== undefined) { fields.push("category = ?");  values.push(category); }
+
+  if (fields.length === 0) {
+    return res.status(400).json({ error: "Nothing to update" });
+  }
+
+  values.push(req.params.idAwards);
+
+  db.query(
+    `UPDATE Awards SET ${fields.join(", ")} WHERE idAwards = ?`,
+    values,
+    function (err) {
+      if (err) {
+        console.error("PATCH /awards/:id:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      emitByAward(req.params.idAwards);
+      res.json({ success: true });
+    }
+  );
+});
+
 router.delete("/", jsonParser, function (req, res) {
   var sql = "DELETE FROM Awards WHERE Teams_idTeams = ? AND awardName = ? ";
   var values = [req.body.id, req.body.award];
+
+  // Capture eventCode before deletion (row won't exist after)
+  emitByTeam(req.body.id);
 
   db.query(sql, values, function (err, result) {
     if (err) throw err;
@@ -216,53 +265,38 @@ router.delete("/", jsonParser, function (req, res) {
 
 
 router.post("/", upload.single("image"), async function (req, res) {
-  const image = req.file;
-  const reqData = (req.body);
-  console.log("Body", reqData);
-  console.log("image", image)
+  const image   = req.file;
+  const reqData = req.body;
 
-  // if (file) {
-  //   const params = {
-  //     Bucket: process.env.BUCKETEER_BUCKET_NAME,
-  //     Key: `${reqData.value}-${req.params.award}`,
-  //     Body: file.buffer,
-  //     ContentType: file.mimetype,
-  //   };
-
-  //   try {
-  //     await s3.upload(params).promise();
-  //     console.log("File uploaded to S3 successfully!");
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
-
-  let imagePath = null;
+  let imageKey = null;
 
   if (image) {
-    imagePath = `/uploads/awards/${image.filename}`;
+    const ext = (image.originalname.split(".").pop() || "jpg").toLowerCase();
+    imageKey = `awards/${uuidv4()}.${ext}`;
+    try {
+      await s3Upload(imageKey, image.buffer, image.mimetype);
+    } catch (err) {
+      console.error("S3 upload error:", err);
+      return res.status(500).json({ error: "Erro ao enviar imagem para S3." });
+    }
   }
 
+  const sql =
+    "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams,Events_idEvent,imagePath) " +
+    "VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?),(SELECT idEvent FROM Events WHERE eventCode = ?),?)";
+  const values = [
+    uuidv4(), reqData.awardName, reqData.motive,
+    reqData.judge, reqData.category, reqData.value,
+    req.headers["eventcode"], imageKey,
+  ];
 
-  var sql =
-    "INSERT INTO Awards (idAwards,awardName,motive,nominated,judge,category,Teams_idTeams, Events_idEvent, imagePath) VALUES (?,?,?,true,?,?,(SELECT idTeams FROM Teams WHERE value = ?), (SELECT idEvent FROM Events WHERE eventCode = ?),?)";
-  var values = [uuidv4(), reqData.awardName, reqData.motive, reqData.judge, reqData.category, reqData.value, req.headers["eventcode"],imagePath];
-  console.log(values)
-  db.query(sql, values, function (err, result) {
+  db.query(sql, values, function (err) {
     if (err) {
-      console.log(err);
-      res.status(500).send({
-        SqlError: err,
-        errno: 1010,
-        Status: 500,
-      });
-    } else {
-      console.log("1 record inserted");
-      res.json({
-        success: true,
-        imagePath
-      });
-      }
+      console.error("DB insert error:", err);
+      return res.status(500).json({ SqlError: err, errno: 1010, Status: 500 });
+    }
+    socketManager.emit(req.headers["eventcode"], "awards:changed");
+    res.json({ success: true });
   });
 });
 

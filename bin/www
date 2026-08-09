@@ -21,6 +21,10 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
+// Attach Socket.IO — must come before server.listen()
+var socketManager = require('../lib/socket');
+socketManager.init(server);
+
 /**
  * Listen on provided port, on all network interfaces.
  */

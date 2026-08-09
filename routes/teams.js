@@ -4,7 +4,8 @@ var router = express.Router();
 var db = require("../connection");
 const multer = require("multer");
 
-const storage = multer.memoryStorage();
+const { upload: s3Upload, signedUrl } = require("../lib/s3");
+
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
     cb(null, true);
@@ -13,13 +14,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const AWS = require("aws-sdk");
-const s3 = new AWS.S3({
-  accessKeyId: process.env.BUCKETEER_AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
-});
-
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+const upload = multer({ storage: multer.memoryStorage(), fileFilter });
 
 // create application/json parser
 var jsonParser = bodyParser.json();
@@ -99,7 +94,13 @@ router.get("/", function (req, res, next) {
         return res.status(500).json({ message: "Erro ao buscar times" });
       }
 
-      res.json(teamsResult);
+      // Replace stored S3 keys with presigned URLs
+      const signed = teamsResult.map((team) => ({
+        ...team,
+        imageLink: team.imageLink ? signedUrl(team.imageLink) : null,
+      }));
+
+      res.json(signed);
     });
   });
 });
@@ -125,31 +126,33 @@ router.put("/:value", jsonParser, function (req, res, next) {
 });
 
 router.post("/picture", upload.single("file"), async function (req, res) {
-  const file = req.file;
-  console.log(req.body.bodyReq);
+  const file    = req.file;
   const reqData = JSON.parse(req.body.bodyReq);
-  console.log(reqData);
 
-  if (file) {
-    const params = {
-      Bucket: process.env.BUCKETEER_BUCKET_NAME,
-      Key: `${reqData.value}-picture`,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    };
+  if (!file) {
+    return res.status(400).json({ message: "Nenhuma imagem enviada." });
+  }
 
-    try {
-      await s3.upload(params).promise();
-      console.log("File uploaded to S3 successfully!");
-      res.send({
-        message: "Foto Adicionada com sucesso",
-      });
-    } catch (error) {
-      console.error(error);
-      res.sendStatus(500).send({
-        Message: "Erro ao adicionar a foto",
-      });
-    }
+  const imageKey = `${reqData.value}-picture`;
+
+  try {
+    await s3Upload(imageKey, file.buffer, file.mimetype);
+
+    // Persist the S3 key so GET /teams can sign it later — respond INSIDE the callback
+    db.query(
+      "UPDATE Teams SET imageLink = ? WHERE value = ?",
+      [imageKey, reqData.value],
+      (err) => {
+        if (err) {
+          console.error("Failed to save imageLink:", err);
+          return res.status(500).json({ message: "Erro ao salvar referência da imagem." });
+        }
+        res.json({ message: "Foto adicionada com sucesso." });
+      }
+    );
+  } catch (error) {
+    console.error("S3 upload error:", error);
+    res.status(500).json({ message: "Erro ao adicionar a foto." });
   }
 });
 
