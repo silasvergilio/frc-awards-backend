@@ -30,8 +30,11 @@ var orderRouter = require('./routes/order');
 var eventsRouter = require('./routes/events')
 var judgesRouter      = require('./routes/judges')
 var pairsRouter       = require('./routes/pairs')
-var awardGroupsRouter = require('./routes/awardGroups')
-var scriptsRouter     = require('./routes/scripts')
+var awardGroupsRouter  = require('./routes/awardGroups')
+var scriptsRouter      = require('./routes/scripts')
+var impactDaysRouter   = require('./routes/impactDays')
+var impactRoomsRouter  = require('./routes/impactRooms')
+var impactSlotsRouter  = require('./routes/impactSlots')
 
 
 //require('dotenv').config()
@@ -93,8 +96,11 @@ app.use('/api/order', orderRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/judges',       judgesRouter);
 app.use('/api/pairs',        pairsRouter);
-app.use('/api/award-groups', awardGroupsRouter);
-app.use('/api/scripts',     scriptsRouter);
+app.use('/api/award-groups',  awardGroupsRouter);
+app.use('/api/scripts',      scriptsRouter);
+app.use('/api/impact-days',  impactDaysRouter);
+app.use('/api/impact-rooms', impactRoomsRouter);
+app.use('/api/impact-slots', impactSlotsRouter);
 
 
 // catch 404 and forward to error handler
