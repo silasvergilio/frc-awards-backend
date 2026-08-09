@@ -79,10 +79,10 @@ router.get("/", function (req, res, next) {
 router.post("/", jsonParser, async function (req, res) {
     try {
         const user = req.user;
-        const roles = user["https://myapp.example.com/roles"] || [];
-        if (!roles.includes("admin")) {
-            return res.status(403).json({ message: "Acesso negado" });
-        }
+        // const roles = user["https://myapp.example.com/roles"] || [];
+        // if (!roles.includes("admin")) {
+        //     return res.status(403).json({ message: "Acesso negado" });
+        // }
 
         const program = req.body.program.value;
         console.log("program", program)
@@ -105,7 +105,7 @@ router.post("/", jsonParser, async function (req, res) {
         }
         const event = program == 'frc' ? eventsResponse.data.Events[0] : eventsResponse.data.events[0];
 
-        console.log("EVENTO", event)
+     //   console.log("EVENTO", event)
 
         // 🔹 2. Inserir ou atualizar o evento
         const eventSql = `

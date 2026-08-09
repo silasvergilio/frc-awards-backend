@@ -28,7 +28,10 @@ var teamsRouter = require('./routes/teams');
 var awardsRouter = require('./routes/awards');
 var orderRouter = require('./routes/order');
 var eventsRouter = require('./routes/events')
-var judgesRouter = require('./routes/judges')
+var judgesRouter      = require('./routes/judges')
+var pairsRouter       = require('./routes/pairs')
+var awardGroupsRouter = require('./routes/awardGroups')
+var scriptsRouter     = require('./routes/scripts')
 
 
 //require('dotenv').config()
@@ -45,7 +48,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 app.use(cors({
   origin: ["https://frc-awards-front.vercel.app", "http://localhost:8081", "http://localhost:8080"],
-  methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD", "DELETE"],
+  methods: ["POST", "PUT", "PATCH", "GET", "OPTIONS", "HEAD", "DELETE"],
   credentials: true,
 }));
 
@@ -71,14 +74,15 @@ app.use(express.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/api', jwtCheck);
+
+// Normalise req.user from the JWT payload (must run AFTER jwtCheck)
 app.use((req, res, next) => {
   if (req.auth) {
-    req.user = req.auth.payload || req.auth; // depende da versão
+    req.user = req.auth.payload ?? req.auth;
   }
   next();
 });
-
-app.use('/api',jwtCheck);
 
 
 app.use('/', indexRouter);
@@ -87,7 +91,10 @@ app.use('/api/teams', teamsRouter);
 app.use('/api/awards', awardsRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/events', eventsRouter);
-app.use('/api/judges', judgesRouter);
+app.use('/api/judges',       judgesRouter);
+app.use('/api/pairs',        pairsRouter);
+app.use('/api/award-groups', awardGroupsRouter);
+app.use('/api/scripts',     scriptsRouter);
 
 
 // catch 404 and forward to error handler
